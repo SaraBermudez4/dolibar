@@ -1,5 +1,5 @@
 project_name = "dolicloud"
-location = "southcentralus"
+location = "westus2"
 
 # subscription_id: se obtiene con `az account show --query id -o tsv`
 # y se exporta para no dejarlo en el repositorio:
@@ -13,7 +13,7 @@ subnet_cidr = "10.1.1.0/24"
 http_allowed_cidrs = ["0.0.0.0/0"]
 ssh_allowed_cidrs  = ["0.0.0.0/0"]
 
-vm_size      = "Standard_B1ms"
+vm_size      = "Standard_B2ls_v2"
 os_disk_size = 30
 
 admin_username      = "azureuser"

@@ -35,6 +35,15 @@ resource "azurerm_subnet" "apps" {
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = [var.apps_subnet_cidr]
+
+  # Azure exige delegar la subred al servicio de Container Apps.
+  delegation {
+    name = "container-apps"
+    service_delegation {
+      name    = "Microsoft.App/environments"
+      actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
+    }
+  }
 }
 
 resource "azurerm_subnet" "mysql" {

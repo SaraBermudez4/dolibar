@@ -7,6 +7,12 @@ resource "azurerm_container_app_environment" "main" {
   resource_group_name      = azurerm_resource_group.main.name
   infrastructure_subnet_id = azurerm_subnet.apps.id
   tags                     = local.tags
+
+  # Perfil de consumo: se paga solo por uso y entra en la cuota gratis mensual.
+  workload_profile {
+    name                  = "Consumption"
+    workload_profile_type = "Consumption"
+  }
 }
 
 resource "azurerm_container_app_environment_storage" "documents" {
@@ -35,6 +41,7 @@ resource "azurerm_container_app" "dolibarr" {
   container_app_environment_id = azurerm_container_app_environment.main.id
   resource_group_name          = azurerm_resource_group.main.name
   revision_mode                = "Single"
+  workload_profile_name        = "Consumption"
   tags                         = local.tags
 
   secret {

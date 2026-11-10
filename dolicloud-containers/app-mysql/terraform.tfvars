@@ -1,5 +1,5 @@
 project_name = "dolicloud"
-location     = "eastus"
+location     = "westus2"
 
 # subscription_id, db_password y dolibarr_admin_password NO van aqui:
 #   export TF_VAR_subscription_id="$(az account show --query id -o tsv)"
