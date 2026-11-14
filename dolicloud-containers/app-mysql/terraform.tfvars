@@ -2,9 +2,9 @@ project_name = "dolicloud"
 location     = "westus2"
 
 # subscription_id, db_password y dolibarr_admin_password NO van aqui:
-#   export TF_VAR_subscription_id="$(az account show --query id -o tsv)"
-#   export TF_VAR_db_password='UnaClaveLarga2026'
-#   export TF_VAR_dolibarr_admin_password='OtraClave2026'
+#   $env:TF_VAR_subscription_id = (az account show --query id -o tsv)
+#   $env:TF_VAR_db_password = 'UnaClaveLarga2026'
+#   $env:TF_VAR_dolibarr_admin_password = 'OtraClave2026'
 
 vnet_cidr         = "10.1.0.0/16"
 apps_subnet_cidr  = "10.1.0.0/23"

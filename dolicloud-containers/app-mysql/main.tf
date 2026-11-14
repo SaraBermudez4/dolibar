@@ -9,54 +9,92 @@ locals {
     Project   = var.project_name
     ManagedBy = "terraform"
   }
-  redis_enabled = var.redis_host != null
 }
 
+# Todo el proyecto vive dentro de un unico grupo de recursos:
+# borrarlo elimina la infraestructura completa.
 resource "azurerm_resource_group" "main" {
   name     = "${var.project_name}-rg"
   location = var.location
   tags     = local.tags
 }
 
-# ------------------------------------------------------------------------------
-# Red: una VNet con una subred para los contenedores y otra para MySQL.
-# cache-redis agrega su propia subred (10.1.3.0/24) en la integracion.
-# ------------------------------------------------------------------------------
-resource "azurerm_virtual_network" "main" {
-  name                = "${var.project_name}-vnet"
-  address_space       = [var.vnet_cidr]
+# Los nombres de MySQL y de la cuenta de almacenamiento son globales en Azure:
+# el sufijo evita choques con otros grupos.
+resource "random_string" "suffix" {
+  length  = 6
+  upper   = false
+  special = false
+}
+
+module "networking" {
+  source = "./modules/networking"
+
+  project_name        = var.project_name
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  tags                = local.tags
+
+  vnet_cidr         = var.vnet_cidr
+  apps_subnet_cidr  = var.apps_subnet_cidr
+  mysql_subnet_cidr = var.mysql_subnet_cidr
+}
+
+module "database" {
+  source = "./modules/database"
+
+  project_name        = var.project_name
+  name_suffix         = random_string.suffix.result
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  tags                = local.tags
+
+  vnet_id   = module.networking.vnet_id
+  subnet_id = module.networking.mysql_subnet_id
+
+  sku_name    = var.mysql_sku
+  db_name     = var.db_name
+  db_username = var.db_username
+  db_password = var.db_password
+}
+
+module "storage" {
+  source = "./modules/storage"
+
+  project_name        = var.project_name
+  name_suffix         = random_string.suffix.result
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
   tags                = local.tags
 }
 
-resource "azurerm_subnet" "apps" {
-  name                 = "${var.project_name}-apps-subnet"
-  resource_group_name  = azurerm_resource_group.main.name
-  virtual_network_name = azurerm_virtual_network.main.name
-  address_prefixes     = [var.apps_subnet_cidr]
+module "compute" {
+  source = "./modules/compute"
 
-  # Azure exige delegar la subred al servicio de Container Apps.
-  delegation {
-    name = "container-apps"
-    service_delegation {
-      name    = "Microsoft.App/environments"
-      actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
-    }
-  }
-}
+  project_name        = var.project_name
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  tags                = local.tags
 
-resource "azurerm_subnet" "mysql" {
-  name                 = "${var.project_name}-mysql-subnet"
-  resource_group_name  = azurerm_resource_group.main.name
-  virtual_network_name = azurerm_virtual_network.main.name
-  address_prefixes     = [var.mysql_subnet_cidr]
+  subnet_id = module.networking.apps_subnet_id
 
-  delegation {
-    name = "mysql-flexible"
-    service_delegation {
-      name    = "Microsoft.DBforMySQL/flexibleServers"
-      actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
-    }
-  }
+  storage_account_name = module.storage.account_name
+  storage_account_key  = module.storage.account_key
+  storage_share_name   = module.storage.share_name
+
+  db_host     = module.database.fqdn
+  db_name     = module.database.db_name
+  db_username = var.db_username
+  db_password = var.db_password
+
+  image                   = var.image
+  dolibarr_admin_login    = var.dolibarr_admin_login
+  dolibarr_admin_password = var.dolibarr_admin_password
+  php_timezone            = var.php_timezone
+  min_replicas            = var.min_replicas
+  max_replicas            = var.max_replicas
+
+  redis_host     = var.redis_host
+  redis_port     = var.redis_port
+  redis_password = var.redis_password
 }

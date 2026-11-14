@@ -4,7 +4,7 @@ variable "subscription_id" {
 }
 
 variable "location" {
-  description = "Azure region (Azure for Students puede restringir algunas regiones)"
+  description = "Region de Azure (Azure for Students puede restringir algunas regiones)"
   type        = string
   default     = "eastus"
 }
@@ -17,12 +17,13 @@ variable "project_name" {
 
 # ---------------------------------------------------------------- Red
 variable "vnet_cidr" {
-  type    = string
-  default = "10.1.0.0/16"
+  description = "Rango de la red virtual"
+  type        = string
+  default     = "10.1.0.0/16"
 }
 
 variable "apps_subnet_cidr" {
-  description = "Subred del Container Apps Environment (minimo /23)"
+  description = "Subred del Container Apps Environment"
   type        = string
   default     = "10.1.0.0/23"
 }
@@ -35,14 +36,15 @@ variable "mysql_subnet_cidr" {
 
 # ---------------------------------------------------------------- MySQL
 variable "mysql_sku" {
-  description = "B_Standard_B1ms entra en los servicios gratis de Azure for Students"
+  description = "Tamano del servidor MySQL"
   type        = string
   default     = "B_Standard_B1ms"
 }
 
 variable "db_name" {
-  type    = string
-  default = "dolibarrdb"
+  description = "Nombre de la base de datos de Dolibarr"
+  type        = string
+  default     = "dolibarrdb"
 }
 
 variable "db_username" {
@@ -64,14 +66,15 @@ variable "db_password" {
 
 # ---------------------------------------------------------------- Dolibarr
 variable "image" {
-  description = "Imagen del contenedor. cache-redis la reemplaza por la suya (ACR) en la integracion"
+  description = "Imagen del contenedor; en la integracion se usa la imagen con Redis del ACR"
   type        = string
   default     = "docker.io/dolibarr/dolibarr:22.0.5"
 }
 
 variable "dolibarr_admin_login" {
-  type    = string
-  default = "admin"
+  description = "Usuario administrador de Dolibarr"
+  type        = string
+  default     = "admin"
 }
 
 variable "dolibarr_admin_password" {
@@ -81,36 +84,41 @@ variable "dolibarr_admin_password" {
 }
 
 variable "php_timezone" {
-  type    = string
-  default = "America/Bogota"
+  description = "Zona horaria de PHP"
+  type        = string
+  default     = "America/Bogota"
 }
 
 variable "min_replicas" {
-  type    = number
-  default = 1
-}
-
-variable "max_replicas" {
-  description = "Dejar en 1 hasta tener Redis: sin sesiones compartidas, 2 replicas cierran la sesion"
+  description = "Replicas minimas del contenedor"
   type        = number
   default     = 1
 }
 
-# ---------------------------------------------------------------- Contrato con cache-redis (Redis)
+variable "max_replicas" {
+  description = "Replicas maximas; sin sesiones compartidas en Redis debe quedar en 1"
+  type        = number
+  default     = 1
+}
+
+# ---------------------------------------------------------------- Redis
 # Vacias por defecto: Dolibarr funciona sin Redis. En la integracion se llenan
-# con los outputs de cache-redis.
+# con las salidas del proyecto de Redis.
 variable "redis_host" {
-  type    = string
-  default = null
+  description = "Host de Azure Managed Redis"
+  type        = string
+  default     = null
 }
 
 variable "redis_port" {
-  type    = number
-  default = null
+  description = "Puerto de Azure Managed Redis"
+  type        = number
+  default     = null
 }
 
 variable "redis_password" {
-  type      = string
-  default   = null
-  sensitive = true
+  description = "Clave de acceso de Azure Managed Redis"
+  type        = string
+  default     = null
+  sensitive   = true
 }

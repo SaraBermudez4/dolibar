@@ -1,14 +1,12 @@
-# ------------------------------------------------------------------------------
-# Contenedor: Azure Container Apps (plan de consumo, dentro de la VNet).
-# ------------------------------------------------------------------------------
+# Contenedor: Azure Container Apps (perfil de consumo, dentro de la VNet).
 resource "azurerm_container_app_environment" "main" {
   name                     = "${var.project_name}-env"
-  location                 = azurerm_resource_group.main.location
-  resource_group_name      = azurerm_resource_group.main.name
-  infrastructure_subnet_id = azurerm_subnet.apps.id
-  tags                     = local.tags
+  location                 = var.location
+  resource_group_name      = var.resource_group_name
+  infrastructure_subnet_id = var.subnet_id
+  tags                     = var.tags
 
-  # Perfil de consumo: se paga solo por uso y entra en la cuota gratis mensual.
+  # Perfil de consumo: se paga solo por uso.
   workload_profile {
     name                  = "Consumption"
     workload_profile_type = "Consumption"
@@ -18,9 +16,9 @@ resource "azurerm_container_app_environment" "main" {
 resource "azurerm_container_app_environment_storage" "documents" {
   name                         = "documents"
   container_app_environment_id = azurerm_container_app_environment.main.id
-  account_name                 = azurerm_storage_account.docs.name
-  share_name                   = azurerm_storage_share.documents.name
-  access_key                   = azurerm_storage_account.docs.primary_access_key
+  account_name                 = var.storage_account_name
+  share_name                   = var.storage_share_name
+  access_key                   = var.storage_account_key
   access_mode                  = "ReadWrite"
 }
 
@@ -32,17 +30,18 @@ resource "random_password" "instance_id" {
 }
 
 locals {
-  app_name = "${var.project_name}-app"
-  app_url  = "https://${local.app_name}.${azurerm_container_app_environment.main.default_domain}"
+  app_name      = "${var.project_name}-app"
+  app_url       = "https://${local.app_name}.${azurerm_container_app_environment.main.default_domain}"
+  redis_enabled = var.redis_host != null
 }
 
 resource "azurerm_container_app" "dolibarr" {
   name                         = local.app_name
   container_app_environment_id = azurerm_container_app_environment.main.id
-  resource_group_name          = azurerm_resource_group.main.name
+  resource_group_name          = var.resource_group_name
   revision_mode                = "Single"
   workload_profile_name        = "Consumption"
-  tags                         = local.tags
+  tags                         = var.tags
 
   secret {
     name  = "db-password"
@@ -105,7 +104,7 @@ resource "azurerm_container_app" "dolibarr" {
       }
       env {
         name  = "DOLI_DB_HOST"
-        value = azurerm_mysql_flexible_server.main.fqdn
+        value = var.db_host
       }
       env {
         name  = "DOLI_DB_HOST_PORT"
@@ -113,7 +112,7 @@ resource "azurerm_container_app" "dolibarr" {
       }
       env {
         name  = "DOLI_DB_NAME"
-        value = azurerm_mysql_flexible_database.dolibarr.name
+        value = var.db_name
       }
       env {
         name  = "DOLI_DB_USER"
@@ -148,7 +147,7 @@ resource "azurerm_container_app" "dolibarr" {
         value = var.php_timezone
       }
 
-      # Contrato con cache-redis: solo se agregan si hay Redis.
+      # Variables de Redis: solo se agregan si se pasa redis_host.
       dynamic "env" {
         for_each = local.redis_enabled ? { REDIS_HOST = var.redis_host, REDIS_PORT = tostring(var.redis_port) } : {}
         content {
@@ -165,9 +164,4 @@ resource "azurerm_container_app" "dolibarr" {
       }
     }
   }
-
-  depends_on = [
-    azurerm_mysql_flexible_database.dolibarr,
-    azurerm_mysql_flexible_server_configuration.no_tls,
-  ]
 }
